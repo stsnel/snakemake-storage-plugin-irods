@@ -224,6 +224,11 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
     def local_suffix(self) -> str:
         """Return a unique suffix for the local path, determined from self.query."""
         return self.path
+    
+    def local_path(self):
+        p = super().local_path()
+        print(p)
+        return p
 
     def cleanup(self):
         """Perform local cleanup of any remainders of the storage object."""
