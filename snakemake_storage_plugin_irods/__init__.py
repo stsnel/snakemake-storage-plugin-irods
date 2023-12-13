@@ -244,13 +244,13 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             return False
 
     def _data_obj(self):
-        return self.provider.session.data_objects.get(self.path)
+        return self.provider.session.data_objects.get(str(self.path))
 
     @retry_decorator
     def mtime(self) -> float:
         # TODO does this also work for collections?
         # return the modification time
-        meta = self.provider.session.metadata.get(DataObject, self.path)
+        meta = self.provider.session.metadata.get(DataObject, str(self.path))
         for m in meta:
             if m.name == "mtime":
                 return float(m.value)
@@ -270,16 +270,16 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         opts = {kw.FORCE_FLAG_KW: ""}
         try:
             # is directory
-            collection = self.provider.session.collections.get(self.path)
+            collection = self.provider.session.collections.get(str(self.path))
             for _, _, objs in collection.walk():
                 for obj in objs:
                     self.provoder.session.data_objects.get(
-                        obj.path, self.local_path() / obj.path, options=opts
+                        obj.path, str(self.local_path() / obj.path), options=opts
                     )
         except CollectionDoesNotExist:
             # is file
             self.provider.session.data_objects.get(
-                self.path, self.local_path(), options=opts
+                str(self.path), str(self.local_path()), options=opts
             )
 
     # The following to methods are only required if the class inherits from
@@ -300,23 +300,23 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         base = PosixPath("")
         for parent in self.path.parents[:-1][::-1]:
             parent = base / parent
-            mkdir(parent)
+            mkdir(str(parent))
             base = parent
 
         if self.local_path().is_dir():
-            mkdir(self.path)
+            mkdir(str(self.path))
             for f in self.local_path().iterdir():
-                self.provider.session.data_objects.put(f, self.path / f.name)
+                self.provider.session.data_objects.put(str(f), str(self.path / f.name))
         else:
-            self.provider.session.data_objects.put(self.local_path(), self.path)
+            self.provider.session.data_objects.put(str(self.local_path()), str(self.path))
 
     @retry_decorator
     def remove(self):
         # Remove the object from the storage.
         try:
-            self.provider.session.collections.unregister(self.path)
+            self.provider.session.collections.unregister(str(self.path))
         except CollectionDoesNotExist:
-            self.provider.session.data_objects.unregister(self.path)
+            self.provider.session.data_objects.unregister(str(self.path))
 
     # The following to methods are only required if the class inherits from
     # StorageObjectGlob.
