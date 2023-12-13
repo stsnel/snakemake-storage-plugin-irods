@@ -7,7 +7,7 @@ authors = [
     "Johannes Koester <johannes.koester@uni-due.de>"
 ]
 readme = "README.md"
-repository = "https://github.com/your/plugin"
+repository = "https://github.com/snakemake/snakemake-storage-plugin-irods"
 documentation = "https://snakemake.github.io/snakemake-plugin-catalog/plugins/storage/irods.html"
 
 [tool.poetry.dependencies]
