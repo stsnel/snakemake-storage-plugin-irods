@@ -27,7 +27,7 @@ class TestStorage(TestStorageBase):
     def get_storage_provider_settings(self) -> Optional[StorageProviderSettingsBase]:
         # instantiate StorageProviderSettings of this plugin as appropriate
         return StorageProviderSettings(
-            user="rods",
+            username="rods",
             zone="tempZone",
             host="localhost",
             port=1247,
