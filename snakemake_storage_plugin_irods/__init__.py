@@ -3,7 +3,6 @@ import datetime
 import json
 import os
 from pathlib import PosixPath
-import time
 from typing import Any, Iterable, Optional, List
 from urllib.parse import urlparse
 
@@ -203,7 +202,9 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
         self.parsed_query = urlparse(self.query)
-        self.path = PosixPath(f"/{self.parsed_query.netloc}") / self.parsed_query.path.lstrip("/")
+        self.path = PosixPath(
+            f"/{self.parsed_query.netloc}"
+        ) / self.parsed_query.path.lstrip("/")
 
     async def inventory(self, cache: IOCacheStorageInterface):
         """From this file, try to find as much existence and modification date
@@ -251,14 +252,14 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
 
     @retry_decorator
     def mtime(self) -> float:
-        # TODO does this also work for collections?
+        # TODO does this also work for collections (i.e. directories)?
         # return the modification time
         meta = self.provider.session.metadata.get(DataObject, str(self.path))
         for m in meta:
             if m.name == "mtime":
                 return float(m.value)
-        # TODO is this conversion needed?
-        #dt = self._convert_time(self._data_obj().modify_time, time.tzname[time.daylight])
+        # TODO is this conversion needed? Unix timestamp is always UTC, right?
+        # dt = self._convert_time(self._data_obj().modify_time, timezone)
         return self._data_obj().modify_time
 
     @retry_decorator
@@ -307,7 +308,9 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             for f in self.local_path().iterdir():
                 self.provider.session.data_objects.put(str(f), str(self.path / f.name))
         else:
-            self.provider.session.data_objects.put(str(self.local_path()), str(self.path))
+            self.provider.session.data_objects.put(
+                str(self.local_path()), str(self.path)
+            )
 
     @retry_decorator
     def remove(self):
