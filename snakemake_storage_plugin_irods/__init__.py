@@ -113,7 +113,7 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             retrieve("irods_home", "home")
 
 
-utc = datetime.utcfromtimestamp(0)
+utc = datetime.fromtimestamp(0, datetime.timezone.utc)
 
 
 # Required:
