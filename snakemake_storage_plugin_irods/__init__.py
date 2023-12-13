@@ -85,8 +85,8 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             "required": True,
         },
     )
-    authentication_scheme: Optional[str] = field(
-        default=None,
+    authentication_scheme: str = field(
+        default="native",
         metadata={
             "help": f"The authentication scheme for the iRODS server. {env_msg}",
             "env_var": False,
