@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 from pathlib import PosixPath
+import time
 from typing import Any, Iterable, Optional, List
 from urllib.parse import urlparse
 
@@ -12,6 +13,7 @@ from irods.exception import (
     CollectionDoesNotExist,
     DataObjectDoesNotExist,
     CAT_NO_ACCESS_PERMISSION,
+    CAT_NAME_EXISTS_AS_DATAOBJ,
 )
 import irods.keywords as kw
 
@@ -201,7 +203,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
         self.parsed_query = urlparse(self.query)
-        self.path = PosixPath(self.parsed_query.netloc) / self.parsed_query.path
+        self.path = PosixPath(f"/{self.parsed_query.netloc}") / self.parsed_query.path.lstrip("/")
 
     async def inventory(self, cache: IOCacheStorageInterface):
         """From this file, try to find as much existence and modification date
@@ -223,12 +225,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
 
     def local_suffix(self) -> str:
         """Return a unique suffix for the local path, determined from self.query."""
-        return self.path
-    
-    def local_path(self):
-        p = super().local_path()
-        print(p)
-        return p
+        return str(self.path).lstrip("/")
 
     def cleanup(self):
         """Perform local cleanup of any remainders of the storage object."""
@@ -245,6 +242,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # return True if the object exists
         try:
             self._data_obj()
+            return True
         except (CollectionDoesNotExist, DataObjectDoesNotExist):
             return False
 
@@ -259,10 +257,9 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         for m in meta:
             if m.name == "mtime":
                 return float(m.value)
-        dt = self._convert_time(self._data_obj().modify_time, self._timezone)
-        utc2 = self._convert_time(utc)
-        mtime = (dt - utc2).total_seconds()
-        return mtime
+        # TODO is this conversion needed?
+        #dt = self._convert_time(self._data_obj().modify_time, time.tzname[time.daylight])
+        return self._data_obj().modify_time
 
     @retry_decorator
     def size(self) -> int:
@@ -302,11 +299,8 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
             except CollectionDoesNotExist:
                 self.provider.session.collections.create(path)
 
-        base = PosixPath("")
-        for parent in self.path.parents[:-1][::-1]:
-            parent = base / parent
+        for parent in self.path.parents[:-2][::-1]:
             mkdir(str(parent))
-            base = parent
 
         if self.local_path().is_dir():
             mkdir(str(self.path))
@@ -320,7 +314,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
         # Remove the object from the storage.
         try:
             self.provider.session.collections.unregister(str(self.path))
-        except CollectionDoesNotExist:
+        except CAT_NAME_EXISTS_AS_DATAOBJ:
             self.provider.session.data_objects.unregister(str(self.path))
 
     # The following to methods are only required if the class inherits from
