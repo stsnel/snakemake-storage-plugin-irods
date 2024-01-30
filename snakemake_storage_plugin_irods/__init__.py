@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import datetime
 import json
 import os
+import ssl
 from pathlib import PosixPath
 from typing import Any, Iterable, Optional, List
 from urllib.parse import urlparse
@@ -94,6 +95,64 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             "required": True,
         },
     )
+    encryption_algorithm: str = field(
+        default="AES-256-CBC",
+        metadata={
+            "help": f"Encryption algorithm for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+    )
+    encryption_key_size: int = field(
+        default=32,
+        metadata={
+            "help": f"Key size for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+    )
+    encryption_num_hash_rounds: int= field(
+        default=16,
+        metadata={
+            "help": f"Number of hash rounds for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+    )
+    encryption_salt_size: int = field(
+        default=8,
+        metadata={
+            "help": f"Salt size for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+    )
+    client_server_negotiation: str = field(
+        default="",
+        metadata={
+            "help": f"Set to 'request_server_negotiation' to enable SSL/TLS. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+        )
+    client_server_policy: str = field(
+        default="CS_NEG_REFUSE",
+        metadata={
+            "help": "CS_NEG_REFUSE: no SSL/TLS, CS_NEG_REQUIRE: enforce SSL/TLS, " +
+                    f"CS_NEG_DONT_CARE: let server decide. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+    )
+    use_ssl: bool= field(
+        default=False,
+        metadata={
+            "help": "Whether to use SSL when connecting to the server. {env_msg}",
+            "env_var": False,
+            "required": True
+        },
+
+    )
 
     def __post_init__(self):
         env_file = PosixPath(os.path.expanduser("~/.irods/irods_environment.json"))
@@ -112,6 +171,12 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             retrieve("irods_zone_name", "zone")
             retrieve("irods_authentication_scheme", "authentication_scheme")
             retrieve("irods_home", "home")
+            retrieve("irods_encryption_algorithm", "encryption_algorithm")
+            retrieve("irods_encryption_key_size", "encryption_key_size")
+            retrieve("irods_encryption_num_hash_rounds", "encryption_num_hash_rounds")
+            retrieve("irods_encryption_salt_size", "encryption_salt_size")
+            retrieve("irods_client_server_negotiation", "client_server_negotiation")
+            retrieve("irods_client_server_policy", "client_server_policy")
 
 
 utc = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
@@ -131,14 +196,34 @@ class StorageProvider(StorageProviderBase):
         # This is optional and can be removed if not needed.
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
-        self.session = iRODSSession(
-            host=self.settings.host,
-            port=self.settings.port,
-            user=self.settings.username,
-            password=self.settings.password,
-            zone=self.settings.zone,
-            authentication_scheme=self.settings.authentication_scheme,
-        )
+        if self.settings.use_ssl:
+           ssl_context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
+           ssl_settings = {'client_server_negotiation': self.settings.client_server_negotiation,
+                           'client_server_policy': self.settings.client_server_policy,
+                           'encryption_algorithm': self.settings.encryption_algorithm,
+                           'encryption_key_size': self.settings.encryption_key_size,
+                           'encryption_num_hash_rounds': self.settings.encryption_num_hash_rounds,
+                           'encryption_salt_size': self.settings.encryption_salt_size,
+                           'ssl_context': ssl_context}
+
+           self.session = iRODSSession(
+               host=self.settings.host,
+               port=self.settings.port,
+               user=self.settings.username,
+               password=self.settings.password,
+               zone=self.settings.zone,
+               authentication_scheme=self.settings.authentication_scheme,
+               **ssl_settings
+           )
+        else:
+           self.session = iRODSSession(
+               host=self.settings.host,
+               port=self.settings.port,
+               user=self.settings.username,
+               password=self.settings.password,
+               zone=self.settings.zone,
+               authentication_scheme=self.settings.authentication_scheme,
+           )
 
     @classmethod
     def example_queries(cls) -> List[ExampleQuery]:
