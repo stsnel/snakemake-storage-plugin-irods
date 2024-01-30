@@ -102,7 +102,7 @@ class StorageProviderSettings(StorageProviderSettingsBase):
                 env = json.load(f)
 
             def retrieve(src, trgt):
-                if getattr(self, trgt) is None:
+                if src in env:
                     setattr(self, trgt, env[src])
 
             retrieve("irods_host", "host")
