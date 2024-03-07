@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/snakemake/snakemake-storage-plugin-irods/compare/v0.1.1...v0.1.2) (2024-03-07)
+
+
+### Bug Fixes
+
+* convert irods datetime to timestamp when returning mtime ([#5](https://github.com/snakemake/snakemake-storage-plugin-irods/issues/5)) ([d10dcad](https://github.com/snakemake/snakemake-storage-plugin-irods/commit/d10dcadc873fbf8d06e9a593d117044821cdc24f))
+
 ## [0.1.1](https://github.com/snakemake/snakemake-storage-plugin-irods/compare/v0.1.0...v0.1.1) (2023-12-13)
 
 
