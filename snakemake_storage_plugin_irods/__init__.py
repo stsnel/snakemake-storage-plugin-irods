@@ -260,7 +260,7 @@ class StorageObject(StorageObjectRead, StorageObjectWrite, StorageObjectGlob):
                 return float(m.value)
         # TODO is this conversion needed? Unix timestamp is always UTC, right?
         # dt = self._convert_time(self._data_obj().modify_time, timezone)
-        return self._data_obj().modify_time
+        return self._data_obj().modify_time.timestamp()
 
     @retry_decorator
     def size(self) -> int:
