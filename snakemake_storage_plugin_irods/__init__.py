@@ -94,6 +94,84 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             "required": True,
         },
     )
+    encryption_algorithm: str = field(
+        default="AES-256-CBC",
+        metadata={
+            "help": f"Encryption algorithm for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    encryption_key_size: int = field(
+        default=32,
+        metadata={
+            "help": f"Key size for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    encryption_num_hash_rounds: int = field(
+        default=16,
+        metadata={
+            "help": "Number of hash rounds for parallel transfer "
+            + f"encryption. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    encryption_salt_size: int = field(
+        default=8,
+        metadata={
+            "help": f"Salt size for parallel transfer encryption. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    client_server_negotiation: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": f"Set to 'request_server_negotiation' to enable SSL/TLS. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    client_server_policy: str = field(
+        default="CS_NEG_REFUSE",
+        metadata={
+            "help": "CS_NEG_REFUSE: no SSL/TLS, CS_NEG_REQUIRE: enforce SSL/TLS, "
+            + f"CS_NEG_DONT_CARE: let server decide. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    ssl_verify_server: str = field(
+        default="hostname",
+        metadata={
+            "help": "none: do not verify certificate, cert: verify certificate"
+            + " validity (but not hostname), "
+            + f"hostname: verify certificate validity and hostname. {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    ssl_ca_certificate_file: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": "Path to file with trusted CA certificates in PEM format. "
+            + "Used in conjunction with system default trusted certificates."
+            + f" {env_msg}",
+            "env_var": False,
+            "required": False,
+        },
+    )
+    use_ssl: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether to use SSL when connecting to the server.",
+            "env_var": False,
+            "required": False,
+        },
+    )
 
     def __post_init__(self):
         env_file = PosixPath(os.path.expanduser("~/.irods/irods_environment.json"))
@@ -102,7 +180,7 @@ class StorageProviderSettings(StorageProviderSettingsBase):
                 env = json.load(f)
 
             def retrieve(src, trgt):
-                if getattr(self, trgt) is None:
+                if src in env and getattr(self, trgt) is None:
                     setattr(self, trgt, env[src])
 
             retrieve("irods_host", "host")
@@ -112,6 +190,14 @@ class StorageProviderSettings(StorageProviderSettingsBase):
             retrieve("irods_zone_name", "zone")
             retrieve("irods_authentication_scheme", "authentication_scheme")
             retrieve("irods_home", "home")
+            retrieve("irods_encryption_algorithm", "encryption_algorithm")
+            retrieve("irods_encryption_key_size", "encryption_key_size")
+            retrieve("irods_encryption_num_hash_rounds", "encryption_num_hash_rounds")
+            retrieve("irods_encryption_salt_size", "encryption_salt_size")
+            retrieve("irods_client_server_negotiation", "client_server_negotiation")
+            retrieve("irods_client_server_policy", "client_server_policy")
+            retrieve("irods_ssl_verify_server", "ssl_verify_server")
+            retrieve("irods_ssl_ca_certificate_file", "ssl_ca_certificate_file")
 
 
 utc = datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
@@ -131,6 +217,20 @@ class StorageProvider(StorageProviderBase):
         # This is optional and can be removed if not needed.
         # Alternatively, you can e.g. prepare a connection to your storage backend here.
         # and set additional attributes.
+        if self.settings.use_ssl:
+            ssl_settings = {
+                "client_server_negotiation": self.settings.client_server_negotiation,
+                "client_server_policy": self.settings.client_server_policy,
+                "encryption_algorithm": self.settings.encryption_algorithm,
+                "encryption_key_size": self.settings.encryption_key_size,
+                "encryption_num_hash_rounds": self.settings.encryption_num_hash_rounds,
+                "encryption_salt_size": self.settings.encryption_salt_size,
+                "ssl_verify_server": self.settings.ssl_verify_server,
+                "ssl_ca_certificate_file": self.settings.ssl_ca_certificate_file,
+            }
+        else:
+            ssl_settings = {}
+
         self.session = iRODSSession(
             host=self.settings.host,
             port=self.settings.port,
@@ -138,6 +238,7 @@ class StorageProvider(StorageProviderBase):
             password=self.settings.password,
             zone=self.settings.zone,
             authentication_scheme=self.settings.authentication_scheme,
+            **ssl_settings,
         )
 
     @classmethod
