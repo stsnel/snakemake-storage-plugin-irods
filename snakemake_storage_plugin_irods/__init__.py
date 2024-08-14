@@ -33,7 +33,7 @@ from snakemake_interface_storage_plugins.storage_object import (
 from snakemake_interface_storage_plugins.io import IOCacheStorageInterface
 
 
-env_msg = "Will also be read from ~/.irods/irods_environment.json if present."
+env_msg = "Value in ~/.irods/irods_environment.json has higher priority, if present. "
 
 
 @dataclass
@@ -180,7 +180,7 @@ class StorageProviderSettings(StorageProviderSettingsBase):
                 env = json.load(f)
 
             def retrieve(src, trgt):
-                if src in env and getattr(self, trgt) is None:
+                if src in env:
                     setattr(self, trgt, env[src])
 
             retrieve("irods_host", "host")
