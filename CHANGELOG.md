@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/snakemake/snakemake-storage-plugin-irods/compare/v0.1.2...v0.2.0) (2024-08-14)
+
+
+### Features
+
+* Add SSL/TLS support ([#3](https://github.com/snakemake/snakemake-storage-plugin-irods/issues/3)) ([dbaf8cf](https://github.com/snakemake/snakemake-storage-plugin-irods/commit/dbaf8cf8936374c5a14bb7178d3434eb7078c883))
+
+
+### Bug Fixes
+
+* ensure irods env settings get priority ([#7](https://github.com/snakemake/snakemake-storage-plugin-irods/issues/7)) ([298db53](https://github.com/snakemake/snakemake-storage-plugin-irods/commit/298db5320aea8645206c505ddbdd27fd2d56973e))
+
 ## [0.1.2](https://github.com/snakemake/snakemake-storage-plugin-irods/compare/v0.1.1...v0.1.2) (2024-03-07)
 
 
