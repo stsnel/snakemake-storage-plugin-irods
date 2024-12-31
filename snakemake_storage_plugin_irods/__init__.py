@@ -6,6 +6,7 @@ from pathlib import PosixPath
 from typing import Any, Iterable, Optional, List
 from urllib.parse import urlparse
 
+from irods import password_obfuscation
 from irods.session import iRODSSession
 from irods.models import DataObject
 from irods.exception import (
@@ -34,6 +35,10 @@ from snakemake_interface_storage_plugins.io import IOCacheStorageInterface
 
 
 env_msg = "Value in ~/.irods/irods_environment.json has higher priority, if present. "
+pswd_msg = (
+    "If no password is provided in the settings or environment file, the"
+    + " password in ~/.irods/.irodsA will be used with native authentication. "
+)
 
 
 @dataclass
@@ -65,9 +70,9 @@ class StorageProviderSettings(StorageProviderSettingsBase):
     password: Optional[str] = field(
         default=None,
         metadata={
-            "help": f"The password for the iRODS server. {env_msg}",
+            "help": f"The password for the iRODS server. {env_msg} {pswd_msg}",
             "env_var": True,
-            "required": True,
+            "required": False,
         },
     )
     zone: Optional[str] = field(
@@ -89,7 +94,8 @@ class StorageProviderSettings(StorageProviderSettingsBase):
     authentication_scheme: str = field(
         default="native",
         metadata={
-            "help": f"The authentication scheme for the iRODS server. {env_msg}",
+            "help": "The authentication scheme for the iRODS server. "
+            + f"{env_msg} {pswd_msg}",
             "env_var": False,
             "required": True,
         },
@@ -231,13 +237,29 @@ class StorageProvider(StorageProviderBase):
         else:
             ssl_settings = {}
 
+        if self.settings.password is None:
+            irodsA = os.path.expanduser("~/.irods/.irodsA")
+            try:
+                with open(irodsA, "r") as r:
+                    scrambled_password = r.read()
+                    password = password_obfuscation.decode(scrambled_password)
+                    authentication_scheme = "native"
+            except OSError as err:
+                raise Exception(
+                    "Error: could not retrieve irods_password from"
+                    + " settings or ~/.irods/.irodsA file."
+                ) from err
+        else:
+            password = self.settings.password
+            authentication_scheme = self.settings.authentication_scheme
+
         self.session = iRODSSession(
             host=self.settings.host,
             port=self.settings.port,
             user=self.settings.username,
-            password=self.settings.password,
+            password=password,
             zone=self.settings.zone,
-            authentication_scheme=self.settings.authentication_scheme,
+            authentication_scheme=authentication_scheme,
             **ssl_settings,
         )
 
